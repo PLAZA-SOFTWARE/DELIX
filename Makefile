@@ -9,7 +9,7 @@ ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386
 
 # Object files (note: terminal_commands.c is now included)
-OBJECTS = kernel.o boot.o terminal.o terminal_commands.o net/net.o net/e1000.o net/arp.o net/vfs.o
+OBJECTS = kernel.o boot.o terminal.o terminal_commands.o net/net.o net/e1000.o net/arp.o net/vfs.o lib/string.o
 
 all: delix-kernel.iso
 
@@ -33,6 +33,9 @@ net/arp.o: net/arp.c net/arp.h net/net.h net/e1000.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 net/vfs.o: net/vfs.c net/vfs.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+lib/string.o: lib/string.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Assemble boot code
@@ -60,6 +63,6 @@ run: delix-kernel.iso
 
 # Clean all build artifacts
 clean:
-	rm -rf *.o delix-kernel.bin delix-kernel.iso iso/ net/*.o
+	rm -rf *.o delix-kernel.bin delix-kernel.iso iso/ net/*.o lib/*.o
 
 .PHONY: all run clean
