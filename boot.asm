@@ -1,12 +1,12 @@
 ; boot.asm - Minimal Multiboot-compliant entry point
 
-section .multiboot
-align 4
-dd 0x1BADB002          ; Multiboot magic
-dd 0x0                 ; Flags (no special features)
-dd -0x1BADB002         ; Checksum
-
 section .text
+    align 4
+    ; Multiboot header must be within the first 8KiB of the kernel file
+    dd 0x1BADB002          ; Multiboot magic
+    dd 0x0                 ; Flags (no special features)
+    dd -0x1BADB002         ; Checksum
+
 global _start
 extern kernel_main
 

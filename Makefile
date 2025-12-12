@@ -44,31 +44,32 @@ lib/string.o: lib/string.c
 boot.o: boot.asm
 	$(NASM) $(ASFLAGS) $< -o $@
 
-# Link flat binary (ELF -> raw binary)
+# Link ELF binary (keep ELF for GRUB multiboot)
 delix-kernel.elf: $(OBJECTS) linker.ld
 	$(LD) $(LDFLAGS) -T linker.ld -o $@ $(OBJECTS)
 
+# Optional: create flat binary from ELF (not used for GRUB multiboot)
 delix-kernel.bin: delix-kernel.elf
 	$(OBJCOPY) -O binary $< $@
 
-# Create bootable ISOs (x86 and x86_64) using same kernel binary
-iso32: delix-kernel.bin
+# Create bootable ISOs (x86 and x86_64) using the ELF kernel (grub requires multiboot header inside the file)
+iso32: delix-kernel.elf
 	mkdir -p iso/boot/grub
-	cp delix-kernel.bin iso/boot/
+	cp delix-kernel.elf iso/boot/delix-kernel.elf
 	@echo 'set timeout=0' > iso/boot/grub/grub.cfg
 	@echo 'set default=0' >> iso/boot/grub/grub.cfg
 	@echo 'menuentry "DELIX Kernel (i386)" {' >> iso/boot/grub/grub.cfg
-	@echo '    multiboot /boot/delix-kernel.bin' >> iso/boot/grub/grub.cfg
+	@echo '    multiboot /boot/delix-kernel.elf' >> iso/boot/grub/grub.cfg
 	@echo '}' >> iso/boot/grub/grub.cfg
 	grub-mkrescue -o delix-kernel-x86.iso iso/
 
-iso64: delix-kernel.bin
+iso64: delix-kernel.elf
 	mkdir -p iso/boot/grub
-	cp delix-kernel.bin iso/boot/
+	cp delix-kernel.elf iso/boot/delix-kernel.elf
 	@echo 'set timeout=0' > iso/boot/grub/grub.cfg
 	@echo 'set default=0' >> iso/boot/grub/grub.cfg
 	@echo 'menuentry "DELIX Kernel (x86_64 VM)" {' >> iso/boot/grub/grub.cfg
-	@echo '    multiboot /boot/delix-kernel.bin' >> iso/boot/grub/grub.cfg
+	@echo '    multiboot /boot/delix-kernel.elf' >> iso/boot/grub/grub.cfg
 	@echo '}' >> iso/boot/grub/grub.cfg
 	grub-mkrescue -o delix-kernel-x64.iso iso/
 
