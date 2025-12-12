@@ -1,6 +1,6 @@
-/* Simple read-only embedded VFS to support `ls`, `cd` and running basic scripts.
-   For demo purposes this VFS stores a small tree in static arrays. In a real kernel
-   you'd implement filesystem drivers. */
+/* Simple read-write embedded VFS to support `ls`, `cd`, `run`, and a tiny editor 'nova'.
+   This VFS stores a small tree in static arrays and allows writing to files (overwrite).
+*/
 
 #include "vfs.h"
 #include "../terminal.h"
@@ -10,10 +10,10 @@ static const char* root_entries[] = {"bin","home","README.txt"};
 static const char* bin_entries[] = {"hello.sh","script.sh"};
 static const char* home_entries[] = {"user.txt"};
 
-static const char* file_hello = "echo Hello from embedded script!\n";
-static const char* file_script = "echo This is a test script.\n";
-static const char* file_user = "User: delix\n";
-static const char* file_readme = "DELIX embedded VFS demo\n";
+static char file_hello[128] = "echo Hello from embedded script!\n";
+static char file_script[128] = "echo This is a test script.\n";
+static char file_user[128] = "User: delix\n";
+static char file_readme[128] = "DELIX embedded VFS demo\n";
 
 static const char* cwd = "/";
 
@@ -70,4 +70,28 @@ int vfs_file_size(const char* path) {
     const char* c = vfs_readfile(path);
     if (!c) return -1;
     int len = 0; while (c[len]) len++; return len;
+}
+
+int vfs_writefile(const char* path, const char* data) {
+    if (strcmp(path, "/bin/hello.sh") == 0) {
+        strncpy(file_hello, data, sizeof(file_hello)-1);
+        file_hello[sizeof(file_hello)-1] = '\0';
+        return 0;
+    }
+    if (strcmp(path, "/bin/script.sh") == 0) {
+        strncpy(file_script, data, sizeof(file_script)-1);
+        file_script[sizeof(file_script)-1] = '\0';
+        return 0;
+    }
+    if (strcmp(path, "/home/user.txt") == 0) {
+        strncpy(file_user, data, sizeof(file_user)-1);
+        file_user[sizeof(file_user)-1] = '\0';
+        return 0;
+    }
+    if (strcmp(path, "/README.txt") == 0) {
+        strncpy(file_readme, data, sizeof(file_readme)-1);
+        file_readme[sizeof(file_readme)-1] = '\0';
+        return 0;
+    }
+    return -1;
 }

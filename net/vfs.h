@@ -9,5 +9,6 @@ int vfs_cd(const char* path); /* change current directory, return 0 on success *
 const char* vfs_readfile(const char* path); /* returns pointer to content or NULL */
 int vfs_file_size(const char* path);
 const char* vfs_get_cwd(void);
+int vfs_writefile(const char* path, const char* data); /* write/overwrite file, 0 ok */
 
 #endif

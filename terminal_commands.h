@@ -7,10 +7,6 @@ void cmd_help(const char* args);
 
 void cmd_version(const char* args);
 
-void cmd_ping(const char* args);
-
-void cmd_pkg(const char* args);
-
 void cmd_ls(const char* args);
 void cmd_cd(const char* args);
 void cmd_run(const char* args);
