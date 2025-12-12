@@ -11,6 +11,17 @@ LDFLAGS = -m elf_i386
 # Object files (note: terminal_commands.c is now included)
 OBJECTS = kernel.o boot.o terminal.o terminal_commands.o net/net.o net/e1000.o net/arp.o net/vfs.o lib/string.o
 
+# Цель для создания flat binary
+delix-kernel.bin: $(OBJECTS) linker.ld
+	$(LD) $(LDFLAGS) -T linker.ld -o delix-kernel.elf $(OBJECTS)
+	objcopy -O binary delix-kernel.elf delix-kernel.bin
+
+# Или если нужно сохранить символы для отладки
+delix-kernel-debug.bin: $(OBJECTS) linker.ld
+	$(LD) $(LDFLAGS) -T linker.ld -o delix-kernel.elf $(OBJECTS)
+	objcopy -O binary delix-kernel.elf delix-kernel.bin
+	objcopy --only-keep-debug delix-kernel.elf delix-kernel.sym
+
 all: delix-kernel.iso
 
 # Compile C source files
