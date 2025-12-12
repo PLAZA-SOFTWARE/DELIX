@@ -3,6 +3,7 @@
 #include "terminal_commands.h"
 #include "terminal.h"
 #include "utils/rtc/rtc.h"
+#include <string.h>
 
 #define KERNEL_NAME    "DELIX"
 #define KERNEL_VERSION "V0.4"
