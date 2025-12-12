@@ -2,7 +2,6 @@
 
 #include "terminal.h"
 #include "terminal_commands.h"
-#include "net/net.h"
 
 /* Write a byte to an I/O port */
 void outb(unsigned short port, unsigned char val) {
@@ -13,18 +12,6 @@ void outb(unsigned short port, unsigned char val) {
 unsigned char inb(unsigned short port) {
     unsigned char ret;
     __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
-
-/* Write a 32-bit value to an I/O port */
-void outl(unsigned short port, unsigned int val) {
-    __asm__ volatile ("outl %0, %1" : : "a"(val), "Nd"(port));
-}
-
-/* Read a 32-bit value from an I/O port */
-unsigned int inl(unsigned short port) {
-    unsigned int ret;
-    __asm__ volatile ("inl %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
@@ -48,14 +35,6 @@ static int find_space(const char* s) {
 void kernel_main(void) {
     terminal_initialize();
     print("Hello from DELIX v0.3!\n");
-
-    /* Initialize network subsystem (if available) */
-    if (net_init() == 0) {
-        print("Network initialized.\n");
-    } else {
-        print("Network initialization failed or not present.\n");
-    }
-
     print("> ");
 
     char input[128];
@@ -64,8 +43,6 @@ void kernel_main(void) {
 
         /* Skip empty input */
         if (strcmp(input, "") == 0) {
-            /* Poll network to handle incoming packets */
-            net_poll();
             print("> ");
             continue;
         }
@@ -96,9 +73,6 @@ void kernel_main(void) {
         if (!found) {
             print("Unknown command. Type 'help' for list of available commands.\n");
         }
-
-        /* Poll network to handle incoming packets */
-        net_poll();
 
         print("> ");
     }

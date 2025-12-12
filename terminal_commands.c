@@ -2,7 +2,6 @@
 
 #include "terminal_commands.h"
 #include "terminal.h"
-#include "net/net.h"
 #include "net/vfs.h"
 
 #define KERNEL_NAME    "DELIX"
@@ -30,27 +29,8 @@ void cmd_help(const char* args) {
     }
 }
 
-/* ping: use net_ping to perform ICMP echo (stub until implemented) */
-void cmd_ping(const char* args) {
-    if (!args || args[0] == '\0') {
-        print("Usage: ping <host>\n");
-        return;
-    }
-
-    print("Pinging ");
-    print(args);
-    print(" ...\n");
-
-    if (net_ping(args) == 0) {
-        print("Ping successful\n");
-    } else {
-        print("Ping failed or not implemented\n");
-    }
-}
-
 /* pkg install <github-url>
-   Since kernel has no network/filesystem, record the request into pkg_requests.txt
-   so a host-side script can perform actual 'git clone'. */
+   For this offline kernel we only print the request token. */
 void cmd_pkg(const char* args) {
     if (!args || args[0] == '\0') {
         print("Usage: pkg install <github-url>\n");
@@ -58,7 +38,6 @@ void cmd_pkg(const char* args) {
     }
 
     /* parse subcommand */
-    /* Expect: "install <url>" */
     int i = 0;
     while (args[i] && args[i] != ' ') i++;
     char sub[16];
@@ -81,11 +60,6 @@ void cmd_pkg(const char* args) {
     print("Requested install from: ");
     print(url);
     print("\n");
-
-    /* Append to pkg_requests.txt in iso/ for host-side script to pick up */
-    /* In freestanding kernel we cannot open files; simulate by printing a marker line
-       that build tools can grep from serial/console output, or the Makefile can be
-       extended to accept a URL argument. Here we print a special token. */
 
     print("[PKG_REQUEST]");
     print(url);
@@ -150,8 +124,7 @@ void cmd_echo(const char* args) {
 static const struct command commands[] = {
     {"version", cmd_version, "version - Show kernel version"},
     {"help",    cmd_help,    "help    - Show this help message"},
-    {"ping",    cmd_ping,    "ping <host> - Basic network test"},
-    {"pkg",     cmd_pkg,     "pkg install <github-url> - Request package install from GitHub"},
+    {"pkg",     cmd_pkg,     "pkg install <github-url> - Request package install (offline)"},
     {"ls",      cmd_ls,      "ls - list current directory"},
     {"cd",      cmd_cd,      "cd <path> - change directory"},
     {"run",     cmd_run,     "run <path> - execute embedded script"},
