@@ -15,14 +15,8 @@ unsigned char inb(unsigned short port) {
     return ret;
 }
 
-/* Compare two null-terminated strings */
-int strcmp(const char* a, const char* b) {
-    while (*a && (*a == *b)) {
-        a++;
-        b++;
-    }
-    return *(unsigned char*)a - *(unsigned char*)b;
-}
+/* Use strcmp from the runtime string helpers */
+extern int strcmp(const char* a, const char* b);
 
 /* Find first space or end */
 static int find_space(const char* s) {
