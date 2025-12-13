@@ -92,10 +92,14 @@ int terminal_getchar(void) {
     int ctrl = 0;
     int shift = 0;
     while (1) {
+        unsigned char status;
+        /* wait until output buffer has data */
+        do { status = inb(0x64); } while (!(status & 1));
         unsigned char scancode = inb(0x60);
         /* Handle extended prefix 0xE0 for arrow keys */
         if (scancode == 0xE0) {
             /* read next scancode byte */
+            do { status = inb(0x64); } while (!(status & 1));
             unsigned char code2 = inb(0x60);
             unsigned char keydown2 = !(code2 & 0x80);
             if (!keydown2) continue;
