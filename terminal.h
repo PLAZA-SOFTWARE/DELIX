@@ -18,4 +18,8 @@ void terminal_putchar(char c);
 void print(const char* str);
 void readline(char* buffer, int maxlen);
 
+/* Get a single character (returns ASCII; supports ctrl combinations and backspace)
+   Blocks until a key is pressed. */
+int terminal_getchar(void);
+
 #endif

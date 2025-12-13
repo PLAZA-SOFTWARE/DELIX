@@ -116,10 +116,23 @@ void cmd_cd(const char* args) {
     }
     if (vfs_cd(args) == 0) {
         print("OK\n");
+    } else {
+        print("No such directory\n");
     }
 }
 
-/* nova: simple editor. Usage: nova <path> — opens file for editing; save with :w and exit with :q */
+/* helper to compute line/col from buffer pos */
+static void compute_line_col(const char* buf, int pos, int* out_line, int* out_col) {
+    int line = 1;
+    int col = 1;
+    for (int i = 0; i < pos && buf[i]; i++) {
+        if (buf[i] == '\n') { line++; col = 1; }
+        else col++;
+    }
+    *out_line = line; *out_col = col;
+}
+
+/* nova: simple editor. Usage: nova <path> — opens file for editing; save with Ctrl+O, exit with Ctrl+X, Ctrl+C shows position */
 void cmd_nova(const char* args) {
     if (!args || args[0] == '\0') {
         print("Usage: nova <path>\n");
@@ -134,31 +147,40 @@ void cmd_nova(const char* args) {
         buffer[0] = '\0';
     }
 
-    print("-- NOVA editor (type :w to save, :q to quit) --\n");
+    print("-- NOVA editor (Ctrl+O save, Ctrl+X exit, Ctrl+C info) --\n");
     print(buffer); print("\n");
 
-    /* Very simple line editor: read lines from user until :q. If :w issued, write buffer to file. */
-    char line[128];
-    int pos = strlen(buffer);
+    /* Very simple line editor: read characters until Ctrl+X. Ctrl+O saves. */
+    int pos = 0;
+    while (buffer[pos]) pos++;
     while (1) {
-        print(":");
-        /* read user input into line via readline — reuse terminal.readline (not exposed), so use readline from terminal.h */
-        readline(line, sizeof(line));
-        if (strcmp(line, ":q") == 0) {
-            print("Exiting nova\n");
+        int c = terminal_getchar();
+        if (c == 24) { /* Ctrl+X */
+            print("\nExiting nova\n");
             break;
-        } else if (strcmp(line, ":w") == 0) {
-            if (vfs_writefile(args, buffer) == 0) print("Saved.\n"); else print("Save failed.\n");
-        } else {
-            /* append line to buffer */
-            int l = 0; while (line[l]) l++;
-            if (pos + l + 2 < (int)sizeof(buffer)) {
-                buffer[pos++] = '\n';
-                for (int k=0;k<l;k++) buffer[pos++] = line[k];
-                buffer[pos] = '\0';
-            } else {
-                print("Buffer full\n");
-            }
+        }
+        if (c == 15) { /* Ctrl+O */
+            if (vfs_writefile(args, buffer) == 0) print("\nSaved.\n"); else print("\nSave failed.\n");
+            continue;
+        }
+        if (c == 3) { /* Ctrl+C -> show info */
+            int line, col; compute_line_col(buffer, pos, &line, &col);
+            print("\n-- INFO --\n");
+            print("File: "); print(args); print("\n");
+            print("Size: "); char tmp[12]; int n = pos; int tp = 0; if (n==0) tmp[tp++]='0'; else { int div=1000000000; int started=0; for (int i=0;i<10;i++){ int d=n/div; if (d||started){ tmp[tp++]= '0'+d; started=1;} n%=div; div/=10;} } tmp[tp]='\0'; print(tmp); print(" bytes\n");
+            print("Line: "); char lt[12]; n=line; tp=0; if (n==0) lt[tp++]='0'; else { int div=1000000000; int started=0; for (int i=0;i<10;i++){ int d=n/div; if (d||started){ lt[tp++]= '0'+d; started=1;} n%=div; div/=10;} } lt[tp]='\0'; print(lt); print(" Col: "); char ct[12]; n=col; tp=0; if (n==0) ct[tp++]='0'; else { int div=1000000000; int started=0; for (int i=0;i<10;i++){ int d=n/div; if (d||started){ ct[tp++]= '0'+d; started=1;} n%=div; div/=10;} } ct[tp]='\0'; print(ct); print("\n");
+            continue;
+        }
+        if (c == 0x08) {
+            if (pos > 0) { pos--; terminal_putchar('\b'); buffer[pos] = '\0'; }
+            continue;
+        }
+        if (c == '\n') {
+            if (pos + 1 < (int)sizeof(buffer)) { buffer[pos++] = '\n'; buffer[pos] = '\0'; terminal_putchar('\n'); }
+            continue;
+        }
+        if (c >= 32 && c < 127) {
+            if (pos + 1 < (int)sizeof(buffer)) { buffer[pos++] = (char)c; buffer[pos] = '\0'; terminal_putchar((char)c); }
         }
     }
 }
