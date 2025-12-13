@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdarg.h>
 
 /* Minimal C string/memory helpers for freestanding kernel */
 
@@ -32,6 +33,63 @@ char *strncpy(char *dest, const char *src, size_t n) {
     for (; i < n && src[i]; i++) dest[i] = src[i];
     for (; i < n; i++) dest[i] = '\0';
     return dest;
+}
+
+char *strcpy(char *dest, const char *src) {
+    char *d = dest;
+    while ((*d++ = *src++));
+    return dest;
+}
+
+char *strcat(char *dest, const char *src) {
+    char *d = dest + strlen(dest);
+    while ((*d++ = *src++));
+    return dest;
+}
+
+char *strrchr(const char *s, int c) {
+    const char *last = NULL;
+    for (; *s; s++) {
+        if (*s == (char)c) last = s;
+    }
+    if (c == '\0') return (char*)s;
+    return (char*)last;
+}
+
+/* Minimal snprintf supporting only %s and %% */
+int snprintf(char *str, size_t size, const char *format, ...) {
+    if (size == 0) return 0;
+    va_list ap;
+    va_start(ap, format);
+    size_t pos = 0;
+    const char *p = format;
+    while (*p && pos + 1 < size) {
+        if (*p == '%') {
+            p++;
+            if (*p == '%') {
+                str[pos++] = '%';
+                p++;
+                continue;
+            } else if (*p == 's') {
+                const char *s = va_arg(ap, const char *);
+                if (!s) s = "(null)";
+                while (*s && pos + 1 < size) {
+                    str[pos++] = *s++;
+                }
+                p++;
+                continue;
+            } else {
+                /* unsupported specifier: treat literally */
+                str[pos++] = '%';
+                if (pos + 1 < size && *p) str[pos++] = *p++;
+                continue;
+            }
+        }
+        str[pos++] = *p++;
+    }
+    str[pos] = '\0';
+    va_end(ap);
+    return (int)pos;
 }
 
 void *memcpy(void *dest, const void *src, size_t n) {
