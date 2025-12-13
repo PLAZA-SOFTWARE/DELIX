@@ -114,8 +114,8 @@ void cmd_help(const char* args) {
 
 /* ls: list current directory */
 void cmd_ls(const char* args) {
-    (void)args;
-    vfs_ls(NULL);
+    /* If args is provided and non-empty, pass it to vfs_ls; otherwise list cwd */
+    vfs_ls(args && args[0] ? args : NULL);
 }
 
 /* cd: change directory */
@@ -298,7 +298,8 @@ void cmd_run(const char* args) {
             continue;
         }
         if (strncmp(&line[s], "ls", 2) == 0 && (line[s+2] == ' ' || line[s+2] == '\0')) {
-            vfs_ls(NULL);
+            const char* path = &line[s+2]; while (*path == ' ') path++;
+            vfs_ls(path && *path ? path : NULL);
             continue;
         }
         if (strncmp(&line[s], "run", 3) == 0 && (line[s+3] == ' ' || line[s+3] == '\0')) {
