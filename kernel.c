@@ -52,8 +52,8 @@ void kernel_main(void) {
         for (i = 0; i < cmd_len && i < (int)sizeof(cmd) - 1; i++) cmd[i] = input[i];
         cmd[i] = '\0';
 
-        const char* args =
-            (input[cmd_len] == ' ') ? &input[cmd_len + 1] : &input[cmd_len];
+        const char* args = NULL;
+        if (input[cmd_len] == ' ') args = &input[cmd_len + 1];
 
         /* Search for matching command */
         int found = 0;
