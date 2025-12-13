@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #define KERNEL_NAME    "DELIX"
-#define KERNEL_VERSION "v0.3"
+#define KERNEL_VERSION "v0.4"
 
 /* Simple script variables */
 #define MAX_VARS 16
@@ -89,6 +89,16 @@ void cmd_version(const char* args) {
     print("\n");
 }
 
+/* Reboot command - attempt keyboard controller reset */
+void cmd_reboot(const char* args) {
+    (void)args;
+    print("Rebooting...\n");
+    /* keyboard controller reset command */
+    outb(0x64, 0xFE);
+    /* fallback: halt */
+    while (1) __asm__ volatile ("hlt");
+}
+
 /* Display help with all available commands */
 void cmd_help(const char* args) {
     (void)args;
@@ -138,25 +148,16 @@ void cmd_nova(const char* args) {
         print("Usage: nova <file>\n");
         return;
     }
-    /* parse filename: allow optional surrounding quotes and leading spaces, remove any quotes */
-    char path[64]; int pi = 0;
+    /* parse filename: skip leading whitespace, support quoted or unquoted filename */
     const char* a = args;
-    while (*a == ' ') a++; /* skip leading spaces */
-    /* read until whitespace */
-    while (*a && *a != ' ' && *a != '\t' && pi < (int)sizeof(path)-1) {
-        char ch = *a++;
-        if (ch == '\"' || ch == '\'') continue; /* skip quotes */
-        path[pi++] = ch;
-    }
-    /* if the first non-space char was a quote, try reading until matching quote */
-    if (pi == 0 && args) {
-        a = args; while (*a == ' ') a++;
-        if (*a == '"' || *a == '\'') {
-            char q = *a++;
-            while (*a && *a != q && pi < (int)sizeof(path)-1) {
-                path[pi++] = *a++;
-            }
-        }
+    while (*a == ' ' || *a == '\t') a++;
+    if (*a == '\0') { print("Usage: nova <file>\n"); return; }
+    char path[64]; int pi = 0;
+    if (*a == '"' || *a == '\'') {
+        char q = *a++;
+        while (*a && *a != q && pi < (int)sizeof(path)-1) path[pi++] = *a++;
+    } else {
+        while (*a && *a != ' ' && *a != '\t' && pi < (int)sizeof(path)-1) path[pi++] = *a++;
     }
     path[pi] = '\0';
     if (pi == 0) { print("Usage: nova <file>\n"); return; }
@@ -329,6 +330,7 @@ static const struct command commands[] = {
     {"cd",      cmd_cd,      "cd <path> - change directory"},
     {"nova",    cmd_nova,    "nova <path> - open simple editor"},
     {"run",     cmd_run,     "run <path> - execute embedded script"},
+    {"reboot",  cmd_reboot,  "reboot - Reboot the system"},
     {"echo",    cmd_echo,    "echo <text> - print text"},
 };
 

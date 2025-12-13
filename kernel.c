@@ -28,7 +28,11 @@ static int find_space(const char* s) {
 /* Kernel main entry point */
 void kernel_main(void) {
     terminal_initialize();
-    print("Hello from DELIX v0.3!\n");
+    /* initialize VFS */
+    extern void vfs_init(void);
+    vfs_init();
+
+    print("Hello from DELIX v0.4!\n");
     print("> ");
 
     char input[128];
