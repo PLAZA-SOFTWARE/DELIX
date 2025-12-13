@@ -132,13 +132,45 @@ static void compute_line_col(const char* buf, int pos, int* out_line, int* out_c
     *out_line = line; *out_col = col;
 }
 
-/* nova: simple editor. Usage: nova <path> — opens file for editing; save with Ctrl+O, exit with Ctrl+X, Ctrl+C shows position */
+/* nova: simple editor. Usage: nova <file> - opens file for editing; save with Ctrl+O, exit with Ctrl+X, Ctrl+C shows position */
 void cmd_nova(const char* args) {
     if (!args || args[0] == '\0') {
-        print("Usage: nova <path>\n");
+        print("Usage: nova <file>\n");
         return;
     }
-    const char* content = vfs_readfile(args);
+    /* parse filename: allow optional surrounding quotes and leading spaces, remove any quotes */
+    char path[64]; int pi = 0;
+    const char* a = args;
+    while (*a == ' ') a++; /* skip leading spaces */
+    /* read until whitespace */
+    while (*a && *a != ' ' && *a != '\t' && pi < (int)sizeof(path)-1) {
+        char ch = *a++;
+        if (ch == '\"' || ch == '\'') continue; /* skip quotes */
+        path[pi++] = ch;
+    }
+    /* if the first non-space char was a quote, try reading until matching quote */
+    if (pi == 0 && args) {
+        a = args; while (*a == ' ') a++;
+        if (*a == '"' || *a == '\'') {
+            char q = *a++;
+            while (*a && *a != q && pi < (int)sizeof(path)-1) {
+                path[pi++] = *a++;
+            }
+        }
+    }
+    path[pi] = '\0';
+    if (pi == 0) { print("Usage: nova <file>\n"); return; }
+
+    /* If file doesn't exist, create empty file so nova can edit it */
+    const char* content = vfs_readfile(path);
+    if (!content) {
+        if (vfs_writefile(path, "") != 0) {
+            print("Failed to create file\n");
+            return;
+        }
+        content = vfs_readfile(path);
+    }
+
     char buffer[1024];
     if (content) {
         int i = 0; while (content[i] && i < (int)sizeof(buffer)-1) { buffer[i] = content[i]; i++; }
@@ -160,13 +192,13 @@ void cmd_nova(const char* args) {
             break;
         }
         if (c == 15) { /* Ctrl+O */
-            if (vfs_writefile(args, buffer) == 0) print("\nSaved.\n"); else print("\nSave failed.\n");
+            if (vfs_writefile(path, buffer) == 0) print("\nSaved.\n"); else print("\nSave failed.\n");
             continue;
         }
         if (c == 3) { /* Ctrl+C -> show info */
             int line, col; compute_line_col(buffer, pos, &line, &col);
             print("\n-- INFO --\n");
-            print("File: "); print(args); print("\n");
+            print("File: "); print(path); print("\n");
             print("Size: "); char tmp[12]; int n = pos; int tp = 0; if (n==0) tmp[tp++]='0'; else { int div=1000000000; int started=0; for (int i=0;i<10;i++){ int d=n/div; if (d||started){ tmp[tp++]= '0'+d; started=1;} n%=div; div/=10;} } tmp[tp]='\0'; print(tmp); print(" bytes\n");
             print("Line: "); char lt[12]; n=line; tp=0; if (n==0) lt[tp++]='0'; else { int div=1000000000; int started=0; for (int i=0;i<10;i++){ int d=n/div; if (d||started){ lt[tp++]= '0'+d; started=1;} n%=div; div/=10;} } lt[tp]='\0'; print(lt); print(" Col: "); char ct[12]; n=col; tp=0; if (n==0) ct[tp++]='0'; else { int div=1000000000; int started=0; for (int i=0;i<10;i++){ int d=n/div; if (d||started){ ct[tp++]= '0'+d; started=1;} n%=div; div/=10;} } ct[tp]='\0'; print(ct); print("\n");
             continue;
@@ -196,9 +228,17 @@ void cmd_run(const char* args) {
         return;
     }
 
+    /* If script starts with shebang (e.g. #!/bin/bash), skip first line so bash-style scripts work */
+    const char* pstart = content;
+    if (pstart[0] == '#' && pstart[1] == '!') {
+        /* skip until newline or end */
+        while (*pstart && *pstart != '\n') pstart++;
+        if (*pstart == '\n') pstart++; /* skip newline */
+    }
+
     vars_clear();
 
-    const char* p = content;
+    const char* p = pstart;
     char line[128];
     char expanded[256];
     while (*p) {
@@ -262,15 +302,12 @@ void cmd_run(const char* args) {
         }
         if (strncmp(&line[s], "run", 3) == 0 && (line[s+3] == ' ' || line[s+3] == '\0')) {
             const char* path = &line[s+3]; while (*path == ' ') path++;
-            /* nested run: read file and interpret lines (simple recursion) */
             const char* nested = vfs_readfile(path);
             if (!nested) { print("No such file\n"); continue; }
-            /* recursively interpret by calling cmd_run on path */
             cmd_run(path);
             continue;
         }
         if (strncmp(&line[s], "set", 3) == 0 && (line[s+3] == ' ' || line[s+3] == '\0')) {
-            /* list variables */
             for (int i=0;i<var_count;i++) {
                 print(var_names[i]); print("="); print(var_values[i]); print("\n");
             }
