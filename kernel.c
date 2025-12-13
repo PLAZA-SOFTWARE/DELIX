@@ -36,6 +36,7 @@ void kernel_main(void) {
     print("> ");
 
     char input[128];
+    static char argsbuf[96]; /* static so pointer remains valid */
     while (1) {
         readline(input, sizeof(input));
 
@@ -52,8 +53,19 @@ void kernel_main(void) {
         for (i = 0; i < cmd_len && i < (int)sizeof(cmd) - 1; i++) cmd[i] = input[i];
         cmd[i] = '\0';
 
-        const char* args = NULL;
-        if (input[cmd_len] == ' ') args = &input[cmd_len + 1];
+        /* Build a safe, trimmed args buffer (empty string if no args) */
+        argsbuf[0] = '\0';
+        if (input[cmd_len] == ' ') {
+            int start = cmd_len + 1;
+            /* skip additional whitespace */
+            while (input[start] == ' ' || input[start] == '\t') start++;
+            int ai = 0;
+            while (input[start] && ai < (int)sizeof(argsbuf) - 1) {
+                argsbuf[ai++] = input[start++];
+            }
+            argsbuf[ai] = '\0';
+        }
+        const char* args = argsbuf;
 
         /* Search for matching command */
         int found = 0;
@@ -61,7 +73,10 @@ void kernel_main(void) {
         for (int j = 0; j < num; j++) {
             const struct command* c = get_command(j);
             if (strcmp(cmd, c->name) == 0) {
+                /* debug: print command and args */
+                print("[DBG] calling: "); print(cmd); print(" arg='"); print(args[0] ? args : ""); print("'\n");
                 c->func(args);
+                print("[DBG] returned: "); print(cmd); print("\n");
                 found = 1;
                 break;
             }
