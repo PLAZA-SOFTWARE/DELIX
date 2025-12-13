@@ -1,6 +1,7 @@
 /* terminal.c - VGA terminal with robust US QWERTY keyboard input */
 
 #include "terminal.h"
+#include <string.h>
 
 #define VGA_BUFFER ((volatile short*)0xB8000)
 #define VGA_WIDTH  80
@@ -160,7 +161,7 @@ int terminal_getchar(void) {
                     case '5': c = '%'; break; case '6': c = '^'; break; case '7': c = '&'; break; case '8': c = '*'; break;
                     case '9': c = '('; break; case '0': c = ')'; break; case '-': c = '_'; break; case '=': c = '+'; break;
                     case '[': c = '{'; break; case ']': c = '}'; break; case '\\': c = '|'; break; case ';': c = ':'; break;
-                    case '\'': c = '"'; break; case ',': c = '<'; break; case '.': c = '>'; break; case '/': c = '?'; break;
+                    case '\'\'': c = '"'; break; case ',': c = '<'; break; case '.': c = '>'; break; case '/': c = '?'; break;
                     case '`': c = '~'; break;
                     default: break;
                 }

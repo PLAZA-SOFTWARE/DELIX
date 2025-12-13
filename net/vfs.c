@@ -6,6 +6,7 @@
 #include "vfs.h"
 #include "../terminal.h"
 #include <string.h>
+#include <stdio.h>
 
 static const char* root_entries[] = {"bin","home","README.txt"};
 static const char* bin_entries[] = {"hello.sh","script.sh"};
