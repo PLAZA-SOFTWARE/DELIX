@@ -87,23 +87,40 @@ void print(const char* str) {
 #define KEY_LEFT  -102
 #define KEY_RIGHT -103
 
-//Blocking getchar implementing ctrl combos and extended keys
+// Blocking getchar implementing ctrl combos, extended keys, and debounce
 int terminal_getchar(void) {
-    int ctrl = 0;
-    int shift = 0;
+    /* Persist modifier state and last key to debounce auto-repeat */
+    static int ctrl = 0;
+    static int shift = 0;
+    static int last_code = -1;
+    static int last_extended = 0;
+
     while (1) {
         unsigned char status;
         /* wait until output buffer has data */
         do { status = inb(0x64); } while (!(status & 1));
         unsigned char scancode = inb(0x60);
+
         /* Handle extended prefix 0xE0 for arrow keys */
         if (scancode == 0xE0) {
             /* read next scancode byte */
             do { status = inb(0x64); } while (!(status & 1));
             unsigned char code2 = inb(0x60);
             unsigned char keydown2 = !(code2 & 0x80);
-            if (!keydown2) continue;
             unsigned char code = code2 & 0x7F;
+            int extended = 1;
+
+            if (!keydown2) {
+                /* key release: clear last if matching */
+                if (last_code == (int)code && last_extended) last_code = -1;
+                continue;
+            }
+
+            /* ignore auto-repeat for same extended key */
+            if (last_code == (int)code && last_extended) continue;
+            last_code = (int)code;
+            last_extended = 1;
+
             switch (code) {
                 case 0x48: return KEY_UP;
                 case 0x50: return KEY_DOWN;
@@ -112,20 +129,32 @@ int terminal_getchar(void) {
                 default: continue;
             }
         }
+
         unsigned char keydown = !(scancode & 0x80);
         unsigned char code = scancode & 0x7F;
 
         // Update modifier state
         if (code == 0x1D) { // Left Ctrl
             ctrl = keydown;
+            if (!keydown && last_code == (int)code && !last_extended) last_code = -1;
             continue;
         }
         if (code == 0x2A || code == 0x36) { // Shift keys
             shift = keydown;
+            if (!keydown && last_code == (int)code && !last_extended) last_code = -1;
             continue;
         }
 
-        if (!keydown) continue; // ignore key releases
+        if (!keydown) {
+            /* key release: clear last if matching */
+            if (last_code == (int)code && !last_extended) last_code = -1;
+            continue; // ignore key releases
+        }
+
+        /* ignore auto-repeat for same key until release */
+        if (last_code == (int)code && !last_extended) continue;
+        last_code = (int)code;
+        last_extended = 0;
 
         // Map scancode to ASCII (simple US layout)
         char c = 0;
@@ -165,7 +194,7 @@ int terminal_getchar(void) {
                     case '5': c = '%'; break; case '6': c = '^'; break; case '7': c = '&'; break; case '8': c = '*'; break;
                     case '9': c = '('; break; case '0': c = ')'; break; case '-': c = '_'; break; case '=': c = '+'; break;
                     case '[': c = '{'; break; case ']': c = '}'; break; case '\\': c = '|'; break; case ';': c = ':'; break;
-                    case '\'\'': c = '"'; break; case ',': c = '<'; break; case '.': c = '>'; break; case '/': c = '?'; break;
+                    case '\'': c = '"'; break; case ',': c = '<'; break; case '.': c = '>'; break; case '/': c = '?'; break;
                     case '`': c = '~'; break;
                     default: break;
                 }
@@ -182,7 +211,7 @@ int terminal_getchar(void) {
 static char history[HISTORY_COUNT][HISTORY_LEN];
 static int history_count = 0; /* number of stored entries */
 
-//Reading keyboard with history and arrow handling
+// Reading keyboard with history and arrow handling
 void readline(char* buffer, int maxlen) {
     int pos = 0;
     buffer[0] = '\0';
